@@ -142,6 +142,25 @@ def main():
     particles = [Particle() for _ in range(PARTICLE_COUNT)]
     t = 0
 
+    # Store default values for reset (restored)
+    default_params = dict(
+        speed=3.0,
+        steering_strength=0.01,
+        res_grid_size=32,
+        show_density_bg=False,
+        menu_collapsed=False,
+        color_start_hue=0.0,
+        color_end_hue=240.0,
+        particle_size=1,
+        particle_shape=0,
+        color_directional=False,
+        lfo_enabled=False,
+        lfo_amplitude=0.0,
+        lfo_rate=0.0,
+        waveform=0,
+        rgb_values=[255, 0, 0, 0, 0, 255]
+    )
+
     # Initialize all UI state variables at the start
     speed = 3.0
     steering_strength = 0.01
@@ -155,9 +174,9 @@ def main():
     color_directional = True
 
     # Menu layout
-    menu_width = 340
+    menu_width = 600  # Increased from 340 for a much wider menu area
     menu_collapsed = False
-    tab_rect = pygame.Rect(0, 0, 32, 80)
+    tab_rect = pygame.Rect(0, 0, 80, 80)  # Increased width from 32 to 80 for a wider tab
     menu_bg_color = (30, 30, 30)
     menu_x = 0
     menu_y = 0
@@ -274,28 +293,14 @@ def main():
     randomise_sliders_btn_rect = pygame.Rect(menu_x + 20, ui_y, menu_width - 40, btn_h)
     ui_y += btn_h + menu_spacing
 
+    # Add pause button
+    pause_btn_rect = pygame.Rect(menu_x + 20, ui_y, menu_width - 40, btn_h)
+    ui_y += btn_h + menu_spacing
+    paused = False
+
     # Set BG and color dir toggles off by default
     show_density_bg = False
     color_directional = False
-
-    # Store default values for reset
-    default_params = dict(
-        speed=3.0,
-        steering_strength=0.01,
-        res_grid_size=32,
-        show_density_bg=False,
-        menu_collapsed=False,
-        color_start_hue=0.0,
-        color_end_hue=240.0,
-        particle_size=1,
-        particle_shape=0,
-        color_directional=False,
-        lfo_enabled=False,
-        lfo_amplitude=0.0,
-        lfo_rate=0.0,
-        waveform=0,
-        rgb_values=[255, 0, 0, 0, 0, 255]
-    )
 
     running = True
     while running:
@@ -364,6 +369,8 @@ def main():
                             p.y = random.uniform(0, HEIGHT)
                             p.vx = 0.0
                             p.vy = 0.0
+                    if pause_btn_rect.collidepoint(mouse_pos):
+                        paused = not paused
                 # Reset button
                 if reset_btn_rect.collidepoint(mouse_pos):
                     speed = default_params['speed']
@@ -387,7 +394,7 @@ def main():
                     return
                 # Randomise sliders button
                 if randomise_sliders_btn_rect.collidepoint(mouse_pos):
-                    import random
+                    # import random  # Removed to avoid UnboundLocalError, use global import
                     speed = random.uniform(SPEED_MIN, SPEED_MAX)
                     steering_strength = random.uniform(STEERING_MIN, STEERING_MAX)
                     res_grid_size = random.randint(res_min, res_max)
@@ -475,38 +482,49 @@ def main():
         screen.blit(tab_surf, (tab_rect.x + 8, tab_rect.y + 20))
         # Draw UI if menu is open
         if not menu_collapsed:
-            draw_button(screen, add_btn_rect, 'Add 1k', btn_hover if add_btn_rect.collidepoint(mouse_pos) else btn_color)
-            draw_button(screen, remove_btn_rect, 'Remove 1k', btn_hover if remove_btn_rect.collidepoint(mouse_pos) else btn_color)
-            draw_button(screen, flip_btn_rect, 'Flip Dimension', btn_hover if flip_btn_rect.collidepoint(mouse_pos) else btn_color)
-            draw_button(screen, randomise_btn_rect, 'Randomise Positions', btn_hover if randomise_btn_rect.collidepoint(mouse_pos) else btn_color)
-            draw_slider(screen, speed_slider_rect, SPEED_MIN, SPEED_MAX, speed, slider_color, handle_color, label="Speed")
-            draw_slider(screen, steering_slider_rect, STEERING_MIN, STEERING_MAX, steering_strength, slider_color, handle_color, label="Steering")
-            draw_slider(screen, res_slider_rect, res_min, res_max, res_grid_size, slider_color, handle_color, label="BG Res")
+            # If paused, use a greyed-out color for all controls
+            ui_color = (120, 120, 120) if paused else btn_color
+            ui_hover = (180, 180, 180) if paused else btn_hover
+            slider_col = (120, 120, 120) if paused else slider_color
+            handle_col = (180, 180, 180) if paused else handle_color
+            # Buttons
+            draw_button(screen, add_btn_rect, 'Add 1k', ui_hover if add_btn_rect.collidepoint(mouse_pos) else ui_color)
+            draw_button(screen, remove_btn_rect, 'Remove 1k', ui_hover if remove_btn_rect.collidepoint(mouse_pos) else ui_color)
+            draw_button(screen, flip_btn_rect, 'Flip Dimension', ui_hover if flip_btn_rect.collidepoint(mouse_pos) else ui_color)
+            draw_button(screen, randomise_btn_rect, 'Randomise Positions', ui_hover if randomise_btn_rect.collidepoint(mouse_pos) else ui_color)
+            draw_slider(screen, speed_slider_rect, SPEED_MIN, SPEED_MAX, speed, slider_col, handle_col, label="Speed")
+            draw_slider(screen, steering_slider_rect, STEERING_MIN, STEERING_MAX, steering_strength, slider_col, handle_col, label="Steering")
+            draw_slider(screen, res_slider_rect, res_min, res_max, res_grid_size, slider_col, handle_col, label="BG Res")
             draw_toggle(screen, toggle_rect, show_density_bg, "BG On")
-            draw_slider(screen, color_start_slider_rect, 0, 360, color_start_hue, slider_color, handle_color, label="Color Start")
-            draw_slider(screen, color_end_slider_rect, 0, 360, color_end_hue, slider_color, handle_color, label="Color End")
-            draw_slider(screen, particle_size_slider_rect, PARTICLE_SIZE_MIN, PARTICLE_SIZE_MAX, particle_size, slider_color, handle_color, label="Particle Size")
-            draw_slider(screen, particle_shape_slider_rect, 0, 1, particle_shape, slider_color, handle_color, label="Shape (0=Circle, 1=Square)")
+            draw_slider(screen, color_start_slider_rect, 0, 360, color_start_hue, slider_col, handle_col, label="Color Start")
+            draw_slider(screen, color_end_slider_rect, 0, 360, color_end_hue, slider_col, handle_col, label="Color End")
+            draw_slider(screen, particle_size_slider_rect, PARTICLE_SIZE_MIN, PARTICLE_SIZE_MAX, particle_size, slider_col, handle_col, label="Particle Size")
+            draw_slider(screen, particle_shape_slider_rect, 0, 1, particle_shape, slider_col, handle_col, label="Shape (0=Circle, 1=Square)")
             draw_toggle(screen, color_dir_toggle_rect, color_directional, "Dir Color")
             draw_toggle(screen, lfo_toggle_rect, lfo_enabled, "LFO On")
-            draw_slider(screen, lfo_amp_slider_rect, LFO_AMP_MIN, LFO_AMP_MAX, lfo_amplitude, slider_color, handle_color, label="LFO Amp")
-            draw_slider(screen, lfo_rate_slider_rect, LFO_RATE_MIN, LFO_RATE_MAX, lfo_rate, slider_color, handle_color, label="LFO Rate")
-            draw_slider(screen, waveform_slider_rect, 0, 3, waveform, slider_color, handle_color, label=f"Waveform: {waveform_names[int(waveform)]}")
+            draw_slider(screen, lfo_amp_slider_rect, LFO_AMP_MIN, LFO_AMP_MAX, lfo_amplitude, slider_col, handle_col, label="LFO Amp")
+            draw_slider(screen, lfo_rate_slider_rect, LFO_RATE_MIN, LFO_RATE_MAX, lfo_rate, slider_col, handle_col, label="LFO Rate")
+            draw_slider(screen, waveform_slider_rect, 0, 3, waveform, slider_col, handle_col, label=f"Waveform: {waveform_names[int(waveform)]}")
             if not color_directional:
                 for i, rect in enumerate(rgb_slider_rects):
-                    draw_slider(screen, rect, RGB_MIN, RGB_MAX, rgb_values[i], slider_color, handle_color, label=rgb_slider_labels[i])
+                    draw_slider(screen, rect, RGB_MIN, RGB_MAX, rgb_values[i], slider_col, handle_col, label=rgb_slider_labels[i])
             # Display total number of particles at the bottom of the menu
             font = pygame.font.SysFont(None, 36)
-            count_surf = font.render(f"Particles: {len(particles)}", True, (255,255,255))
+            count_surf = font.render(f"Particles: {len(particles)}", True, (200,200,200) if paused else (255,255,255))
             screen.blit(count_surf, (menu_x + 20, HEIGHT - 60))
             # Draw reset and exit buttons
-            draw_button(screen, reset_btn_rect, 'Reset', btn_hover if reset_btn_rect.collidepoint(mouse_pos) else btn_color)
-            draw_button(screen, exit_btn_rect, 'Exit', btn_hover if exit_btn_rect.collidepoint(mouse_pos) else btn_color)
-            draw_button(screen, randomise_sliders_btn_rect, 'Randomise Sliders', btn_hover if randomise_sliders_btn_rect.collidepoint(mouse_pos) else btn_color)
+            draw_button(screen, reset_btn_rect, 'Reset', ui_hover if reset_btn_rect.collidepoint(mouse_pos) else ui_color)
+            draw_button(screen, exit_btn_rect, 'Exit', ui_hover if exit_btn_rect.collidepoint(mouse_pos) else ui_color)
+            draw_button(screen, randomise_sliders_btn_rect, 'Randomise Sliders', ui_hover if randomise_sliders_btn_rect.collidepoint(mouse_pos) else ui_color)
+            draw_button(screen, pause_btn_rect, 'Pause' if not paused else 'Resume', ui_hover if pause_btn_rect.collidepoint(mouse_pos) else ui_color)
 
-        for idx, p in enumerate(particles):
-            p.update(t, flip_dim, speed, steering_strength, lfo_enabled, lfo_amplitude, lfo_rate, waveform)
-            p.draw(screen, color_start_hue, color_end_hue, particle_size, particle_shape, color_directional, rgb_values, idx, len(particles))
+        if not paused:
+            for idx, p in enumerate(particles):
+                p.update(t, flip_dim, speed, steering_strength, lfo_enabled, lfo_amplitude, lfo_rate, waveform)
+                p.draw(screen, color_start_hue, color_end_hue, particle_size, particle_shape, color_directional, rgb_values, idx, len(particles))
+        else:
+            for idx, p in enumerate(particles):
+                p.draw(screen, color_start_hue, color_end_hue, particle_size, particle_shape, color_directional, rgb_values, idx, len(particles))
 
         pygame.display.flip()
         t += 0.005
